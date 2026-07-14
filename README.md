@@ -29,7 +29,7 @@ npm run dev
 ค่า default:
 
 ```env
-ALFRESCO_HOST=http://172.17.1.21
+ALFRESCO_HOST=http://{ IP Server }
 PORT=3001
 USER_SESSION_TTL_MS=28800000
 ```
