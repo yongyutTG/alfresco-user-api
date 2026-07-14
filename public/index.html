@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alfresco User API</title>
+  <style>
+    body { margin: 0; font-family: Tahoma, Arial, sans-serif; background: #f6f7f9; color: #172033; line-height: 1.6; }
+    main { width: min(960px, calc(100% - 32px)); margin: 28px auto 48px; }
+    section { background: #fff; border: 1px solid #d9dee7; border-radius: 8px; padding: 18px; margin-bottom: 14px; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin: 0 0 10px; font-size: 19px; }
+    pre { background: #0f172a; color: #e5edf7; padding: 14px; border-radius: 8px; overflow-x: auto; }
+    code { font-family: Consolas, Monaco, monospace; }
+    .note { border-left: 4px solid #0f766e; background: #eef7f6; padding: 10px 12px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <main>
+    <section>
+      <h1>Alfresco User API</h1>
+      <p>โปรเจคนี้แยกจากของเดิม ใช้ Alfresco username/password ของ user เพื่อให้ permission การเห็น folder/file เป็นไปตามสิทธิ์ใน Alfresco จริง</p>
+      <p class="note">ของเดิม <code>alfresco-api</code> ยังใช้ได้เหมือนเดิมที่ port 3000 ส่วนโปรเจคใหม่นี้ default ใช้ port 3001</p>
+    </section>
+
+    <section>
+      <h2>1. Login</h2>
+      <pre><code>POST http://localhost:3001/auth/login
+Content-Type: application/json
+
+{
+  "username": "alfresco_user",
+  "password": "alfresco_password"
+}</code></pre>
+      <p>Response จะได้ <code>accessToken</code> เอาไปใช้เป็น Bearer token ของ user session</p>
+    </section>
+
+    <section>
+      <h2>2. List folders ตามสิทธิ์ user</h2>
+      <pre><code>GET http://localhost:3001/user-api/alfresco/folders?path=/Sites/tg-saving/documentLibrary
+Authorization: Bearer &lt;accessToken&gt;</code></pre>
+    </section>
+
+    <section>
+      <h2>3. List/Search documents ตามสิทธิ์ user</h2>
+      <pre><code>GET http://localhost:3001/user-api/alfresco/documents?folderPath=/Sites/tg-saving/documentLibrary/การเงิน&amp;q=026277&amp;maxItems=20&amp;skipCount=0
+Authorization: Bearer &lt;accessToken&gt;</code></pre>
+    </section>
+
+    <section>
+      <h2>4. Open file</h2>
+      <pre><code>GET http://localhost:3001/user-api/alfresco/documents/DOCUMENT_ID/content?name=file.pdf
+Authorization: Bearer &lt;accessToken&gt;</code></pre>
+    </section>
+  </main>
+</body>
+</html>
