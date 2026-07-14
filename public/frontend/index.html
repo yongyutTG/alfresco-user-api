@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alfresco User Files</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #667085;
+      --border: #d7dee8;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --danger: #b42318;
+      --soft: #eef7f6;
+      --row: #fbfcfe;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Tahoma, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 24px;
+    }
+
+    .header-inner {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    h1 { margin: 0; font-size: 22px; line-height: 1.25; }
+    .subhead { color: var(--muted); font-size: 13px; margin-top: 5px; overflow-wrap: anywhere; }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 22px auto 42px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .login-grid {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 0.8fr) minmax(260px, 1fr) 130px auto auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    input, select, button {
+      height: 38px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font: inherit;
+      font-size: 14px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0 10px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    button {
+      padding: 0 14px;
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button:hover { background: var(--accent-dark); }
+    button.secondary { background: #fff; color: var(--accent-dark); }
+    button.danger { border-color: var(--danger); background: var(--danger); }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .hidden { display: none !important; }
+
+    .session-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: var(--soft);
+      border: 1px solid #b7dfd9;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+      color: var(--accent-dark);
+      font-size: 14px;
+    }
+
+    .status {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 14px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .status strong { color: var(--text); }
+    .error { color: var(--danger); }
+
+    .table-wrap {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+      font-size: 13px;
+    }
+
+    th { background: #eef2f6; font-weight: 700; color: #344054; }
+    tbody tr:nth-child(even) { background: var(--row); }
+    tbody tr:last-child td { border-bottom: 0; }
+
+    .name { overflow-wrap: anywhere; font-weight: 600; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .muted { color: var(--muted); }
+    .empty { padding: 34px 12px; text-align: center; color: var(--muted); }
+
+    .pager { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+
+    @media (max-width: 820px) {
+      header { padding: 16px; }
+      .header-inner { display: block; }
+      main { width: calc(100% - 20px); margin-top: 14px; }
+      .login-grid, .toolbar { grid-template-columns: 1fr; }
+      .session-bar, .status { flex-direction: column; align-items: stretch; }
+      table { min-width: 760px; }
+      .table-wrap { overflow-x: auto; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>Alfresco User Files</h1>
+        <div class="subhead" id="currentPath">Login ด้วย user Alfresco เพื่อดู folder/file ตามสิทธิ์ของ user</div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" id="loginPanel">
+      <form class="login-grid" id="loginForm">
+        <div>
+          <label for="username">Alfresco username</label>
+          <input id="username" name="username" type="text" autocomplete="username" required>
+        </div>
+        <div>
+          <label for="password">Alfresco password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button id="loginBtn" type="submit">Login</button>
+      </form>
+    </section>
+
+    <section class="session-bar hidden" id="sessionBar">
+      <div>Login เป็น <strong id="sessionUser">-</strong></div>
+      <button id="logoutBtn" class="secondary" type="button">Logout</button>
+    </section>
+
+    <section class="panel" id="filePanel">
+      <div class="toolbar" aria-label="ค้นหาไฟล์">
+        <div>
+          <label for="folderSelect">เลือกโฟลเดอร์</label>
+          <select id="folderSelect">
+            <option value="">-- login แล้วเลือกโฟลเดอร์ --</option>
+          </select>
+        </div>
+        <div>
+          <label for="keyword">ค้นหาชื่อไฟล์</label>
+          <input id="keyword" type="search" placeholder="เช่น 026277, 38849, .pdf" autocomplete="off">
+        </div>
+        <div>
+          <label for="pageSize">จำนวนต่อหน้า</label>
+          <select id="pageSize">
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="250">250</option>
+            <option value="500">500</option>
+          </select>
+        </div>
+        <button id="searchBtn" type="button">ค้นหา</button>
+        <button id="clearBtn" class="secondary" type="button">ล้าง</button>
+      </div>
+    </section>
+
+    <div class="status">
+      <div id="summary">กรุณา login ก่อนใช้งาน</div>
+      <div id="pageInfo"></div>
+    </div>
+
+    <section class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 56px;">#</th>
+            <th>ชื่อไฟล์</th>
+            <th style="width: 110px;">ขนาด</th>
+            <th style="width: 170px;">วันที่สร้าง</th>
+            <th style="width: 120px;">เปิดไฟล์</th>
+          </tr>
+        </thead>
+        <tbody id="fileRows">
+          <tr><td colspan="5" class="empty">ยังไม่มีข้อมูล</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <nav class="pager" aria-label="แบ่งหน้า">
+      <button id="prevBtn" class="secondary" type="button">ก่อนหน้า</button>
+      <button id="nextBtn" type="button">ถัดไป</button>
+    </nav>
+  </main>
+
+  <script>
+    const documentLibraryPath = "/Sites/tg-saving/documentLibrary";
+    const tokenKey = "alfrescoUserApiToken";
+    const usernameKey = "alfrescoUserApiUsername";
+
+    const state = {
+      token: sessionStorage.getItem(tokenKey) || "",
+      username: sessionStorage.getItem(usernameKey) || "",
+      folderPath: "",
+      q: "",
+      maxItems: 100,
+      skipCount: 0,
+      total: 0,
+      hasMoreItems: false,
+      loading: false,
+    };
+
+    const els = {
+      loginPanel: document.getElementById("loginPanel"),
+      loginForm: document.getElementById("loginForm"),
+      username: document.getElementById("username"),
+      password: document.getElementById("password"),
+      loginBtn: document.getElementById("loginBtn"),
+      sessionBar: document.getElementById("sessionBar"),
+      sessionUser: document.getElementById("sessionUser"),
+      logoutBtn: document.getElementById("logoutBtn"),
+      folderSelect: document.getElementById("folderSelect"),
+      keyword: document.getElementById("keyword"),
+      pageSize: document.getElementById("pageSize"),
+      searchBtn: document.getElementById("searchBtn"),
+      clearBtn: document.getElementById("clearBtn"),
+      prevBtn: document.getElementById("prevBtn"),
+      nextBtn: document.getElementById("nextBtn"),
+      currentPath: document.getElementById("currentPath"),
+      summary: document.getElementById("summary"),
+      pageInfo: document.getElementById("pageInfo"),
+      rows: document.getElementById("fileRows"),
+    };
+
+    function authHeaders() {
+      return state.token ? { Authorization: `Bearer ${state.token}` } : {};
+    }
+
+    async function fetchJson(url, options = {}) {
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          ...(options.headers || {}),
+          ...authHeaders(),
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+      return data;
+    }
+
+    function setLoading(loading) {
+      state.loading = loading;
+      for (const element of [els.folderSelect, els.keyword, els.pageSize, els.searchBtn, els.clearBtn, els.loginBtn]) {
+        element.disabled = loading;
+      }
+      els.prevBtn.disabled = loading || state.skipCount === 0;
+      els.nextBtn.disabled = loading || !state.hasMoreItems;
+    }
+
+    function setLoggedIn(token, username) {
+      state.token = token;
+      state.username = username;
+      sessionStorage.setItem(tokenKey, token);
+      sessionStorage.setItem(usernameKey, username);
+      renderSession();
+    }
+
+    function clearSession() {
+      state.token = "";
+      state.username = "";
+      state.folderPath = "";
+      state.q = "";
+      state.skipCount = 0;
+      state.hasMoreItems = false;
+      sessionStorage.removeItem(tokenKey);
+      sessionStorage.removeItem(usernameKey);
+      els.keyword.value = "";
+      els.folderSelect.innerHTML = '<option value="">-- login แล้วเลือกโฟลเดอร์ --</option>';
+      els.rows.innerHTML = '<tr><td colspan="5" class="empty">ยังไม่มีข้อมูล</td></tr>';
+      els.summary.textContent = "กรุณา login ก่อนใช้งาน";
+      els.pageInfo.textContent = "";
+      renderSession();
+    }
+
+    function renderSession() {
+      const loggedIn = Boolean(state.token);
+      els.loginPanel.classList.toggle("hidden", loggedIn);
+      els.sessionBar.classList.toggle("hidden", !loggedIn);
+      els.sessionUser.textContent = state.username || "-";
+      els.currentPath.textContent = loggedIn ? (state.folderPath || "เลือกโฟลเดอร์ที่ต้องการ") : "Login ด้วย user Alfresco เพื่อดู folder/file ตามสิทธิ์ของ user";
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function formatBytes(bytes) {
+      const value = Number(bytes);
+      if (!Number.isFinite(value)) return "-";
+      if (value < 1024) return `${value} B`;
+      if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+      return `${(value / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function formatDate(ms) {
+      if (!ms) return "-";
+      return new Intl.DateTimeFormat("th-TH", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(Number(ms)));
+    }
+
+    async function login(username, password) {
+      setLoading(true);
+      els.summary.textContent = "กำลัง login...";
+      try {
+        const res = await fetch("/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+        setLoggedIn(data.accessToken, data.username);
+        els.password.value = "";
+        await loadFolders();
+      } catch (err) {
+        els.summary.innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function loadFolders() {
+      if (!state.token) return;
+      setLoading(true);
+      els.summary.textContent = "กำลังโหลดรายชื่อโฟลเดอร์...";
+      try {
+        const params = new URLSearchParams({ path: documentLibraryPath });
+        const folders = await fetchJson(`/user-api/alfresco/folders?${params.toString()}`);
+        const options = folders
+          .filter((item) => item.isFolder && item.path)
+          .sort((a, b) => (a.name || "").localeCompare(b.name || "", "th"))
+          .map((folder) => `<option value="${escapeHtml(folder.path)}">${escapeHtml(folder.name)}</option>`)
+          .join("");
+
+        els.folderSelect.innerHTML = `<option value="">-- เลือกโฟลเดอร์ --</option>${options}`;
+        state.folderPath = "";
+        els.currentPath.textContent = "เลือกโฟลเดอร์ที่ต้องการ";
+        els.summary.textContent = "เลือกโฟลเดอร์เพื่อโหลดไฟล์ตามสิทธิ์ของ user";
+      } catch (err) {
+        els.summary.innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function buildDocumentsUrl() {
+      const params = new URLSearchParams({
+        folderPath: state.folderPath,
+        maxItems: String(state.maxItems),
+        skipCount: String(state.skipCount),
+      });
+      if (state.q) params.set("q", state.q);
+      return `/user-api/alfresco/documents?${params.toString()}`;
+    }
+
+    function renderRows(files) {
+      if (!files.length) {
+        els.rows.innerHTML = '<tr><td colspan="5" class="empty">ไม่พบไฟล์</td></tr>';
+        return;
+      }
+
+      els.rows.innerHTML = files.map((file, index) => {
+        const rowNumber = state.skipCount + index + 1;
+        return `
+          <tr>
+            <td class="num">${rowNumber}</td>
+            <td class="name">${escapeHtml(file.name || "-")}</td>
+            <td class="num muted">${formatBytes(file.size)}</td>
+            <td class="muted">${formatDate(file.creationDate)}</td>
+            <td><button class="secondary" type="button" data-download-url="${escapeHtml(file.downloadUrl || "")}">เปิด</button></td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    async function loadFiles(resetPage = false) {
+      if (!state.token) {
+        els.summary.textContent = "กรุณา login ก่อนใช้งาน";
+        return;
+      }
+      if (!state.folderPath) {
+        els.summary.textContent = "กรุณาเลือกโฟลเดอร์ก่อน";
+        els.rows.innerHTML = '<tr><td colspan="5" class="empty">กรุณาเลือกโฟลเดอร์ก่อน</td></tr>';
+        return;
+      }
+
+      if (resetPage) state.skipCount = 0;
+      setLoading(true);
+      els.summary.textContent = "กำลังโหลดข้อมูล...";
+      els.pageInfo.textContent = "";
+      els.currentPath.textContent = state.folderPath;
+
+      try {
+        const data = await fetchJson(buildDocumentsUrl());
+        state.total = data.total || 0;
+        state.hasMoreItems = Boolean(data.hasMoreItems);
+        renderRows(data.files || []);
+        const mode = state.q ? `ผลค้นหา "${state.q}"` : "ไฟล์ทั้งหมด";
+        els.summary.innerHTML = `<strong>${mode}</strong> แสดง ${data.count || 0} จากทั้งหมด ${state.total.toLocaleString("th-TH")} รายการ`;
+        els.pageInfo.textContent = `skipCount ${state.skipCount.toLocaleString("th-TH")} | maxItems ${state.maxItems}`;
+      } catch (err) {
+        els.rows.innerHTML = '<tr><td colspan="5" class="empty error">โหลดข้อมูลไม่สำเร็จ</td></tr>';
+        els.summary.innerHTML = `<span class="error">${escapeHtml(err.message)}</span>`;
+        state.hasMoreItems = false;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function syncSearchState() {
+      state.folderPath = els.folderSelect.value || "";
+      state.q = els.keyword.value.trim();
+      state.maxItems = Number(els.pageSize.value);
+    }
+
+    async function openDocument(url) {
+      if (!url) return;
+      try {
+        const res = await fetch(url, { headers: authHeaders() });
+        if (!res.ok) {
+          let message = `HTTP ${res.status}`;
+          try {
+            const error = await res.json();
+            message = error.message || message;
+          } catch (err) {}
+          throw new Error(message);
+        }
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        window.open(objectUrl, "_blank", "noopener");
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    els.loginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      login(els.username.value.trim(), els.password.value);
+    });
+
+    els.logoutBtn.addEventListener("click", async () => {
+      try {
+        if (state.token) await fetch("/auth/logout", { method: "POST", headers: authHeaders() });
+      } catch (err) {}
+      clearSession();
+    });
+
+    els.folderSelect.addEventListener("change", () => {
+      els.keyword.value = "";
+      syncSearchState();
+      loadFiles(true);
+    });
+
+    els.searchBtn.addEventListener("click", () => {
+      syncSearchState();
+      loadFiles(true);
+    });
+
+    els.keyword.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        syncSearchState();
+        loadFiles(true);
+      }
+    });
+
+    els.pageSize.addEventListener("change", () => {
+      syncSearchState();
+      loadFiles(true);
+    });
+
+    els.clearBtn.addEventListener("click", () => {
+      els.keyword.value = "";
+      syncSearchState();
+      loadFiles(true);
+    });
+
+    els.prevBtn.addEventListener("click", () => {
+      syncSearchState();
+      state.skipCount = Math.max(0, state.skipCount - state.maxItems);
+      loadFiles(false);
+    });
+
+    els.nextBtn.addEventListener("click", () => {
+      syncSearchState();
+      state.skipCount += state.maxItems;
+      loadFiles(false);
+    });
+
+    els.rows.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-download-url]");
+      if (button) openDocument(button.dataset.downloadUrl);
+    });
+
+    renderSession();
+    setLoading(false);
+    if (state.token) loadFolders();
+  </script>
+</body>
+</html>
