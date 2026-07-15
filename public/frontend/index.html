@@ -263,10 +263,16 @@
 
   <script>
     const documentLibraryPath = "/Sites/tg-saving/documentLibrary";
+
+    // key ใน sessionStorage ของ browser
+    // alfrescoUserApiToken ไม่ได้มาจาก .env แต่ได้จาก response ของ POST /auth/login
+    // ใช้เก็บ accessToken ชั่วคราวเพื่อให้ refresh หน้าแล้วยังเรียก API ต่อได้ใน tab/session เดิม
     const tokenKey = "alfrescoUserApiToken";
     const usernameKey = "alfrescoUserApiUsername";
 
     const state = {
+      // โหลด token/username ที่เคย login ไว้จาก sessionStorage
+      // sessionStorage จะหายเมื่อปิด tab/browser session หรือ logout
       token: sessionStorage.getItem(tokenKey) || "",
       username: sessionStorage.getItem(usernameKey) || "",
       folderPath: "",
@@ -301,10 +307,13 @@
     };
 
     function authHeaders() {
+      // ทุก API ใต้ /user-api/alfresco/* ต้องแนบ token นี้
+      // Backend จะเอา token ไปหา session แล้วเรียก Alfresco ด้วยสิทธิ์ของ user ที่ login
       return state.token ? { Authorization: `Bearer ${state.token}` } : {};
     }
 
     async function fetchJson(url, options = {}) {
+      // helper กลางสำหรับเรียก API แบบ JSON และแนบ Bearer token ให้อัตโนมัติ
       const res = await fetch(url, {
         ...options,
         headers: {
@@ -327,6 +336,8 @@
     }
 
     function setLoggedIn(token, username) {
+      // token ตรงนี้คือ data.accessToken ที่ Backend สร้างให้หลังตรวจ Alfresco login สำเร็จ
+      // เก็บไว้เฉพาะใน browser session ไม่ใช่ token ถาวร และไม่ใช่ API_TOKEN ของโปรเจคเก่า
       state.token = token;
       state.username = username;
       sessionStorage.setItem(tokenKey, token);
@@ -335,6 +346,8 @@
     }
 
     function clearSession() {
+      // logout ฝั่ง browser: ล้าง token ออกจาก memory และ sessionStorage
+      // ส่วน /auth/logout จะลบ session ฝั่ง Backend ด้วย
       state.token = "";
       state.username = "";
       state.folderPath = "";
@@ -388,6 +401,8 @@
     }
 
     async function login(username, password) {
+      // ส่ง username/password ไปที่ Backend เท่านั้น
+      // Backend จะลอง login กับ Alfresco และคืน accessToken กลับมา ถ้าถูกต้อง
       setLoading(true);
       els.summary.textContent = "กำลัง login...";
       try {
@@ -398,6 +413,7 @@
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || `HTTP ${res.status}`);
+        // data.accessToken คือค่าที่จะถูกเก็บใน sessionStorage ชื่อ alfrescoUserApiToken
         setLoggedIn(data.accessToken, data.username);
         els.password.value = "";
         await loadFolders();
@@ -414,6 +430,7 @@
       els.summary.textContent = "กำลังโหลดรายชื่อโฟลเดอร์...";
       try {
         const params = new URLSearchParams({ path: documentLibraryPath });
+        // fetchJson จะแนบ Authorization: Bearer <alfrescoUserApiToken> ให้เอง
         const folders = await fetchJson(`/user-api/alfresco/folders?${params.toString()}`);
         const options = folders
           .filter((item) => item.isFolder && item.path)
@@ -480,6 +497,7 @@
       els.currentPath.textContent = state.folderPath;
 
       try {
+        // Backend จะใช้ token เพื่อเรียก Alfresco ตาม permission ของ user ที่ login
         const data = await fetchJson(buildDocumentsUrl());
         state.total = data.total || 0;
         state.hasMoreItems = Boolean(data.hasMoreItems);
@@ -505,6 +523,7 @@
     async function openDocument(url) {
       if (!url) return;
       try {
+        // เปิดไฟล์ก็ต้องแนบ token เช่นกัน เพราะ Backend ต้องรู้ว่าเป็น user คนไหน
         const res = await fetch(url, { headers: authHeaders() });
         if (!res.ok) {
           let message = `HTTP ${res.status}`;
@@ -587,3 +606,5 @@
   </script>
 </body>
 </html>
+
+
