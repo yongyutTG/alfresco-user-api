@@ -522,6 +522,15 @@
 
     async function openDocument(url) {
       if (!url) return;
+
+      // เปิด tab เปล่าทันทีในจังหวะ click ก่อน await/fetch
+      // ถ้ารอ fetch เสร็จแล้วค่อย window.open() หลาย browser จะ block popup
+      const viewer = window.open("", "_blank");
+      if (viewer) {
+        viewer.document.title = "Loading document...";
+        viewer.document.body.innerHTML = "<p style='font-family:Tahoma,Arial,sans-serif;padding:16px'>กำลังโหลดไฟล์...</p>";
+      }
+
       try {
         // เปิดไฟล์ก็ต้องแนบ token เช่นกัน เพราะ Backend ต้องรู้ว่าเป็น user คนไหน
         const res = await fetch(url, { headers: authHeaders() });
@@ -533,15 +542,26 @@
           } catch (err) {}
           throw new Error(message);
         }
+
         const blob = await res.blob();
         const objectUrl = URL.createObjectURL(blob);
-        window.open(objectUrl, "_blank", "noopener");
+
+        if (viewer && !viewer.closed) {
+          viewer.location.href = objectUrl;
+        } else {
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.target = "_blank";
+          link.rel = "noopener";
+          link.click();
+        }
+
         setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
       } catch (err) {
+        if (viewer && !viewer.closed) viewer.close();
         alert(err.message);
       }
     }
-
     els.loginForm.addEventListener("submit", (event) => {
       event.preventDefault();
       login(els.username.value.trim(), els.password.value);
@@ -606,5 +626,6 @@
   </script>
 </body>
 </html>
+
 
 
