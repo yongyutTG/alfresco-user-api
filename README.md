@@ -1,5 +1,7 @@
 # Alfresco User API
 
+เอกสาร flow แบบ Step 1, 2, 3: [FLOW_STEPS.md](FLOW_STEPS.md)
+
 โปรเจคนี้เป็น API Gateway แยกจาก `alfresco-api` เดิม สำหรับกรณีที่ต้องการให้ user แต่ละคนเห็น folder/file ตามสิทธิ์ใน Alfresco จริง
 
 ## Flow
@@ -101,3 +103,4 @@ Authorization: Bearer <accessToken>
 - ถ้าใช้งานจริงควรเปิดผ่าน HTTPS
 - ถ้ามีหลาย server ควรเปลี่ยนจาก memory session เป็น Redis/session store
 - permission ที่ได้จะขึ้นกับ Alfresco user ที่ login
+

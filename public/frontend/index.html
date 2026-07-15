@@ -526,7 +526,9 @@
       // เปิดแบบ direct URL เหมือนเวอร์ชันแรก ให้ browser เป็นคน stream/render PDF เอง
       // หลัง login backend ตั้ง HttpOnly cookie แล้ว route content จึงรู้ session user ได้โดยไม่ต้อง fetch blob ผ่าน JS
       window.open(url, "_blank", "noopener");
-    }    els.loginForm.addEventListener("submit", (event) => {
+    }
+
+    els.loginForm.addEventListener("submit", (event) => {
       event.preventDefault();
       login(els.username.value.trim(), els.password.value);
     });
@@ -590,7 +592,4 @@
   </script>
 </body>
 </html>
-
-
-
 
