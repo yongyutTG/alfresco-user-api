@@ -33,19 +33,28 @@ const userSessions = new Map();
 
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
+
+// ทุก endpoint ใต้ /user-api/alfresco/* ต้องผ่าน middleware นี้ก่อน
+// middleware ตรวจ session ได้ 2 แบบ: Bearer token สำหรับ dev/Postman และ cookie สำหรับ browser/window.open
 app.use("/user-api/alfresco", requireUserSession);
 
+// สร้าง Basic Auth header สำหรับไปเรียก Alfresco แทน user ที่ login
+// ตรงนี้เกิดเฉพาะฝั่ง backend เท่านั้น password ไม่ถูกส่งกลับไป frontend
 function createAlfrescoAuthHeader(username, password) {
   const token = Buffer.from(`${username}:${password}`, "utf8").toString("base64");
   return { Authorization: `Basic ${token}` };
 }
 
+// อ่าน Bearer token จาก header เช่น Authorization: Bearer abc123
+// ใช้สำหรับ Postman, external dev หรือ fetch() จาก frontend
 function getBearerToken(req) {
   const authorization = req.get("authorization") || "";
   const [scheme, token] = authorization.split(" ");
   return scheme === "Bearer" ? token : null;
 }
 
+// อ่าน cookie จาก request โดยไม่ต้องติดตั้ง cookie-parser
+// ใช้ตอน browser เปิดไฟล์ด้วย window.open(url) เพราะ window.open ใส่ Authorization header เองไม่ได้
 function getCookie(req, name) {
   const cookieHeader = req.get("cookie") || "";
   const cookies = cookieHeader.split(";").map((item) => item.trim()).filter(Boolean);
@@ -62,6 +71,8 @@ function getCookie(req, name) {
   return null;
 }
 
+// ตั้ง HttpOnly cookie ให้ browser หลัง login สำเร็จ
+// HttpOnly ช่วยกัน JavaScript อ่านค่า cookie โดยตรง ลดความเสี่ยง token หลุดจาก XSS
 function setUserSessionCookie(res, token) {
   const maxAgeSeconds = Math.floor(USER_SESSION_TTL_MS / 1000);
   res.setHeader(
@@ -70,10 +81,13 @@ function setUserSessionCookie(res, token) {
   );
 }
 
+// ลบ cookie ตอน logout เพื่อให้ browser ไม่ส่ง session เก่ามาอีก
 function clearUserSessionCookie(res) {
   res.setHeader("Set-Cookie", "alfresco_user_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax");
 }
 
+// ล้าง session ที่หมดอายุออกจาก memory
+// โปรเจคนี้ใช้ memory session: restart server แล้ว session ทั้งหมดจะหาย
 function cleanupExpiredUserSessions() {
   const now = Date.now();
   for (const [token, session] of userSessions.entries()) {
@@ -81,6 +95,8 @@ function cleanupExpiredUserSessions() {
   }
 }
 
+// สร้าง session หลัง login สำเร็จ
+// token ที่สร้างตรงนี้จะถูกส่งกลับไปเป็น accessToken และถูก set เป็น cookie ด้วย
 function createUserSession(username, password) {
   cleanupExpiredUserSessions();
   const token = crypto.randomBytes(32).toString("hex");
@@ -98,6 +114,8 @@ function createUserSession(username, password) {
   return token;
 }
 
+// ตรวจ session ของ user ก่อนเข้า /user-api/alfresco/*
+// ถ้ามี Bearer token จะใช้ Bearer ก่อน ถ้าไม่มีจะ fallback ไปอ่าน cookie
 function requireUserSession(req, res, next) {
   cleanupExpiredUserSessions();
 
@@ -185,6 +203,8 @@ function handleError(res, message, err) {
   res.status(status).json({ message, status, error: safeErrorData(err) });
 }
 
+// ใช้ username/password ที่ user กรอกไปลองเรียก Alfresco จริง
+// ถ้า Alfresco ตอบ 401/403 แปลว่า login ไม่ผ่าน และจะไม่สร้าง session
 async function validateAlfrescoLogin(username, password) {
   await axios.get(`${ALFRESCO_CMIS}/root`, {
     headers: createAlfrescoAuthHeader(username, password),
@@ -267,6 +287,8 @@ async function searchDocumentsInTree(folderPath, searchText, headers, options = 
   };
 }
 
+// Stream content ของเอกสารจาก Alfresco กลับไปที่ browser/client
+// ใช้ stream โดยตรง ไม่โหลดทั้งไฟล์เข้า memory ของ Node ก่อน จึงเหมาะกับ PDF ขนาดใหญ่
 async function streamDocumentContent(res, id, name, headers) {
   if (!id || id === "DOCUMENT_ID") {
     return res.status(400).json({ message: "Missing real document id" });
@@ -297,6 +319,9 @@ app.get("/health", async (req, res) => {
   }
 });
 
+// Login endpoint
+// รับ Alfresco username/password -> ตรวจผ่าน Alfresco -> สร้าง session token
+// response จะคืน accessToken สำหรับ dev ใช้ Bearer และ set cookie สำหรับ browser
 app.post("/auth/login", async (req, res) => {
   try {
     const username = String(req.body.username || "").trim();
@@ -321,6 +346,7 @@ app.post("/auth/login", async (req, res) => {
   }
 });
 
+// ดู session ปัจจุบัน ใช้ตรวจว่า token/cookie ยังใช้ได้ไหม
 app.get("/auth/me", requireUserSession, (req, res) => {
   const session = userSessions.get(req.userSessionToken);
   res.json({
@@ -331,12 +357,15 @@ app.get("/auth/me", requireUserSession, (req, res) => {
   });
 });
 
+// Logout: ลบ session ฝั่ง backend และลบ cookie ฝั่ง browser
 app.post("/auth/logout", requireUserSession, (req, res) => {
   userSessions.delete(req.userSessionToken);
   clearUserSessionCookie(res);
   res.json({ ok: true });
 });
 
+// List folders ตามสิทธิ์ของ user ที่ login
+// req.alfrescoAuthHeaders ถูกสร้างจาก session ของ user ใน requireUserSession()
 app.get("/user-api/alfresco/folders", async (req, res) => {
   try {
     const folderPath = req.query.path || "/";
@@ -347,6 +376,8 @@ app.get("/user-api/alfresco/folders", async (req, res) => {
   }
 });
 
+// List/Search documents ตามสิทธิ์ของ user ที่ login
+// ถ้ามี q/keyword/name จะค้นจากชื่อไฟล์ ถ้าไม่มีจะ list ทั้งหมดใน folderPath
 app.get("/user-api/alfresco/documents", async (req, res) => {
   try {
     const folderPath = req.query.folderPath || req.query.path || "/Sites/tg-saving/documentLibrary";
@@ -367,6 +398,8 @@ app.get("/user-api/alfresco/documents", async (req, res) => {
   }
 });
 
+// เปิด/ดาวน์โหลดไฟล์ตาม document id
+// route นี้รองรับ browser เปิดตรงด้วย cookie และ dev เรียกด้วย Bearer token
 app.get("/user-api/alfresco/documents/:id/content", async (req, res) => {
   try {
     await streamDocumentContent(res, req.params.id, req.query.name, req.alfrescoAuthHeaders);
