@@ -46,6 +46,34 @@ function getBearerToken(req) {
   return scheme === "Bearer" ? token : null;
 }
 
+function getCookie(req, name) {
+  const cookieHeader = req.get("cookie") || "";
+  const cookies = cookieHeader.split(";").map((item) => item.trim()).filter(Boolean);
+
+  for (const cookie of cookies) {
+    const separatorIndex = cookie.indexOf("=");
+    if (separatorIndex === -1) continue;
+
+    const key = cookie.slice(0, separatorIndex);
+    const value = cookie.slice(separatorIndex + 1);
+    if (key === name) return decodeURIComponent(value);
+  }
+
+  return null;
+}
+
+function setUserSessionCookie(res, token) {
+  const maxAgeSeconds = Math.floor(USER_SESSION_TTL_MS / 1000);
+  res.setHeader(
+    "Set-Cookie",
+    `alfresco_user_session=${encodeURIComponent(token)}; Max-Age=${maxAgeSeconds}; Path=/; HttpOnly; SameSite=Lax`
+  );
+}
+
+function clearUserSessionCookie(res) {
+  res.setHeader("Set-Cookie", "alfresco_user_session=; Max-Age=0; Path=/; HttpOnly; SameSite=Lax");
+}
+
 function cleanupExpiredUserSessions() {
   const now = Date.now();
   for (const [token, session] of userSessions.entries()) {
@@ -73,7 +101,7 @@ function createUserSession(username, password) {
 function requireUserSession(req, res, next) {
   cleanupExpiredUserSessions();
 
-  const token = getBearerToken(req);
+  const token = getBearerToken(req) || getCookie(req, "alfresco_user_session");
   const session = token ? userSessions.get(token) : null;
 
   if (!session) {
@@ -280,6 +308,7 @@ app.post("/auth/login", async (req, res) => {
 
     await validateAlfrescoLogin(username, password);
     const token = createUserSession(username, password);
+    setUserSessionCookie(res, token);
 
     res.json({
       tokenType: "Bearer",
@@ -304,6 +333,7 @@ app.get("/auth/me", requireUserSession, (req, res) => {
 
 app.post("/auth/logout", requireUserSession, (req, res) => {
   userSessions.delete(req.userSessionToken);
+  clearUserSessionCookie(res);
   res.json({ ok: true });
 });
 
@@ -349,3 +379,4 @@ app.listen(PORT, () => {
   console.log(`Alfresco user API running at http://localhost:${PORT}`);
   console.log(`Alfresco server: ${ALFRESCO_HOST}`);
 });
+
